@@ -1,0 +1,24 @@
+# backend/requirements.txt
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic-settings
+pydantic[email]
+python-dotenv
+passlib[bcrypt]
+python-jose[cryptography]
+httpx
+stripe
+python-multipart
+
+# CV-specific libraries
+opencv-python
+# For TFLite model inference. Choose one:
+# 1. tensorflow-lite-runtime (smaller, for inference only, might be platform specific for Raspberry Pi etc.)
+#    Consider this for edge deployments if available for your target.
+tensorflow-lite-runtime
+# 2. tensorflow (full TensorFlow package, includes TFLite converter and runtime)
+#    If tensorflow-lite-runtime causes issues or you need other TF features.
+# tensorflow
+numpy
+firebase-admin

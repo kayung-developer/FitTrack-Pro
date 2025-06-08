@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitTrack Pro - Advanced Fitness Dashboard</title>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+      import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, getIdToken, updateProfile } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+      const firebaseConfig = {
+          apiKey: "AIzaSyCt8VXdGBM4S5BOqlPsS-YeT60Um-ufOsQ", // YOUR ACTUAL KEY
+          authDomain: "fittrack-pro-a1523.firebaseapp.com",
+          projectId: "fittrack-pro-a1523",
+          storageBucket: "fittrack-pro-a1523.appspot.com", // Corrected: .appspot.com for storage
+          messagingSenderId: "445671159787",
+          appId: "1:445671159787:web:79f5d9229c81c24e7d8bae",
+          measurementId: "G-TBVGDS4SHR"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      // Make auth and specific functions available globally for React components
+      window.firebaseApp = app; // Expose app if needed for other Firebase services
+      window.firebaseAuth = auth;
+      window.firebaseCreateUserWithEmailAndPassword = createUserWithEmailAndPassword;
+      window.firebaseSignInWithEmailAndPassword = signInWithEmailAndPassword;
+      window.firebaseSignOut = signOut;
+      window.firebaseOnAuthStateChanged = onAuthStateChanged;
+      window.firebaseGoogleAuthProvider = GoogleAuthProvider;
+      window.firebaseSignInWithPopup = signInWithPopup;
+      window.firebaseGetIdToken = getIdToken;
+      window.firebaseUpdateProfile = updateProfile; // For updating Firebase user's displayName
+
+      console.log("Firebase SDK initialized (V9 modular).");
+    </script>
+
+    <!-- React, Babel, Chart.js, Stripe.js, Font Awesome, Google Fonts (as before) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* YOUR EXISTING AWESOME CSS STYLES */
+        :root {
+            --primary-color: #00C9A7; /* Vibrant Teal */
+            --primary-darker: #00A88F;
+            --secondary-color: #34495E; /* Deep Blue-Gray */
+            --secondary-lighter: #4A6572;
+            --accent-color: #F39C12; /* Warm Orange/Yellow */
+            --accent-darker: #D35400;
+            --background-color: #F4F6F8; /* Light Gray */
+            --card-background-color: #FFFFFF;
+            --text-color: #333F48; /* Dark Gray for text */
+            --text-muted-color: #6C7A89;
+            --border-color: #E0E7ED;
+            --success-color: #2ECC71;
+            --error-color: #E74C3C;
+            --warning-color: #F1C40F;
+
+            --font-family-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-family-headings: 'Poppins', var(--font-family-sans-serif);
+
+            --border-radius-sm: 4px;
+            --border-radius-md: 8px;
+            --box-shadow-sm: 0 2px 4px rgba(0,0,0,0.04);
+            --box-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --box-shadow-lg: 0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.05);
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-family-sans-serif); margin: 0; padding: 0;
+            background-color: var(--background-color); color: var(--text-color);
+            line-height: 1.65; font-size: 16px;
+            -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+        }
+        #root { display: flex; flex-direction: column; min-height: 100vh; }
+        header.app-header {
+            background-color: var(--secondary-color); color: #ecf0f1; padding: 1rem 2rem;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: var(--box-shadow-md); flex-wrap: wrap; position: sticky; top: 0; z-index: 1020;
+        }
+        header.app-header h1 {
+            margin: 0; font-family: var(--font-family-headings); font-size: 1.8rem; font-weight: 600;
+            display: flex; align-items: center; gap: 0.5rem; color: var(--primary-color);
+        }
+        header.app-header h1 .fa-heartbeat { animation: pulse 2s infinite ease-in-out; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        header.app-header nav { margin-left: auto; }
+        header.app-header nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; }
+        header.app-header nav ul li { margin: 0.25rem 0.3rem; }
+        header.app-header nav ul li a, header.app-header nav ul li button {
+            color: #ecf0f1; text-decoration: none; font-size: 0.95rem; font-weight: 500;
+            padding: 0.6rem 1rem; border-radius: var(--border-radius-sm);
+            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+            background: none; border: none; cursor: pointer; white-space: nowrap;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        header.app-header nav ul li a:hover, header.app-header nav ul li button:hover { background-color: var(--secondary-lighter); color: #fff; }
+        header.app-header nav ul li a.active-nav, header.app-header nav ul li button.active-nav {
+            background-color: var(--primary-color); color: var(--secondary-color); font-weight: 600;
+            box-shadow: 0 0 0 2px var(--primary-darker);
+        }
+        .auth-buttons button { background-color: var(--primary-color); color: var(--secondary-color); }
+        .auth-buttons button:hover { background-color: var(--primary-darker); color: #fff; }
+        .auth-buttons .logout-button { background-color: var(--accent-color); color: white; }
+        .auth-buttons .logout-button:hover { background-color: var(--accent-darker); }
+        main.app-main { flex-grow: 1; padding: 2rem; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+        .card {
+            background-color: var(--card-background-color); border-radius: var(--border-radius-md);
+            padding: 1.5rem 2rem; box-shadow: var(--box-shadow-md);
+            transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+            display: flex; flex-direction: column; border: 1px solid var(--border-color);
+        }
+        .card:hover { transform: translateY(-6px); box-shadow: var(--box-shadow-lg); }
+        .card h2, .card h3 {
+            font-family: var(--font-family-headings); margin-top: 0; color: var(--secondary-color);
+            border-bottom: 3px solid var(--primary-color); padding-bottom: 0.75rem; margin-bottom: 1.25rem;
+            font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .card h2 .fa, .card h3 .fa, .card h2 .fas, .card h3 .fas { color: var(--primary-color); }
+        .card p { margin-bottom: 0.75rem; flex-grow: 1; color: var(--text-muted-color); }
+        .card strong { color: var(--text-color); font-weight: 600; }
+        .card .actions { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+        .card .value-highlight { font-size: 2em; font-weight: 700; color: var(--primary-color); margin: 0.5rem 0; }
+        .form-container {
+            background-color: var(--card-background-color); padding: 2.5rem; border-radius: var(--border-radius-md);
+            box-shadow: var(--box-shadow-lg); max-width: 650px; margin: 2rem auto; border: 1px solid var(--border-color);
+        }
+        .form-container h2 { font-family: var(--font-family-headings); text-align: center; color: var(--secondary-color); margin-bottom: 2rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.6rem; font-weight: 600; color: var(--text-muted-color); font-size: 0.9rem;}
+        .form-group input[type="text"], .form-group input[type="email"], .form-group input[type="password"], .form-group input[type="number"], .form-group input[type="date"], .form-group input[type="time"], .form-group input[type="datetime-local"], .form-group select, .form-group textarea {
+            width: 100%; padding: 0.9rem 1rem; border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm); box-sizing: border-box; font-size: 1rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease; background-color: #fff;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 201, 167, 0.2);
+        }
+        .form-group textarea { min-height: 120px; resize: vertical; }
+        button, .button-primary, .button-secondary, .button-danger, .button-accent {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 0.75rem 1.5rem; border: none; border-radius: var(--border-radius-sm);
+            font-size: 1rem; font-weight: 600; font-family: var(--font-family-sans-serif);
+            cursor: pointer; transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            text-align: center; margin-top: 0.5rem; margin-right: 0.5rem; text-decoration: none; box-shadow: var(--box-shadow-sm);
+        }
+        button:hover, .button-primary:hover, .button-secondary:hover, .button-danger:hover, .button-accent:hover { transform: translateY(-2px); box-shadow: var(--box-shadow-md); }
+        button:active, .button-primary:active, .button-secondary:active, .button-danger:active, .button-accent:active { transform: translateY(0px); box-shadow: var(--box-shadow-sm); }
+        button:disabled, .button-primary:disabled, .button-secondary:disabled, .button-danger:disabled, .button-accent:disabled { opacity: 0.6; cursor: not-allowed; transform: translateY(0); box-shadow: none; }
+        .button-primary { background-color: var(--primary-color); color: var(--secondary-color); }
+        .button-primary:hover { background-color: var(--primary-darker); color: #fff; }
+        .button-secondary { background-color: var(--secondary-color); color: white; }
+        .button-secondary:hover { background-color: var(--secondary-lighter); }
+        .button-danger { background-color: var(--error-color); color: white; }
+        .button-danger:hover { background-color: #C0392B; }
+        .button-accent { background-color: var(--accent-color); color: white; }
+        .button-accent:hover { background-color: var(--accent-darker); }
+        button.form-button[type="submit"] { width: 100%; margin-right: 0; margin-top: 1.5rem; padding: 1rem 1.5rem; font-size: 1.1rem; }
+        .link-button { background: none; border: none; color: var(--primary-color); text-decoration: none; cursor: pointer; padding: 0; font-size: 1em; font-weight: 500; }
+        .link-button:hover { color: var(--primary-darker); text-decoration: underline; }
+        .message-base { padding: 1rem 1.5rem; border-radius: var(--border-radius-sm); margin: 1rem 0; font-size: 0.95rem; border-width: 1px; border-style: solid; display: flex; align-items: center; gap: 0.75rem; }
+        .error-message { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+        .success-message { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
+        .warning-message { color: #856404; background-color: #fff3cd; border-color: #ffeeba; }
+        .item-list { list-style: none; padding: 0; }
+        .item-list li {
+            background-color: #f9fafb; border: 1px solid var(--border-color);
+            padding: 1.25rem 1.5rem; margin-bottom: 0.75rem; border-radius: var(--border-radius-sm);
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+            transition: background-color 0.2s ease;
+        }
+        .item-list li:hover { background-color: #f1f5f9; }
+        .item-list li > div:first-child { flex-grow: 1; margin-right: 1rem; }
+        .item-list li .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        .item-list li .actions button { padding: 0.4rem 0.8rem; font-size: 0.85rem; margin-top:0; margin-right: 0;}
+        .text-center { text-align: center; } .mt-1 { margin-top: 1rem; } .mt-2 { margin-top: 2rem; } .mt-3 { margin-top: 3rem; } .mb-1 { margin-bottom: 1rem; } .mb-2 { margin-bottom: 2rem; } .mb-3 { margin-bottom: 3rem; } .p-1 { padding: 1rem; } .p-2 { padding: 2rem; } .w-auto { width: auto !important; } .d-flex { display: flex; } .gap-1 { gap: 0.5rem; } .gap-2 { gap: 1rem; } .align-items-center { align-items: center; } .justify-content-between { justify-content: space-between; }
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(25, 35, 45, 0.7); backdrop-filter: blur(5px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1050; padding: 1rem; box-sizing: border-box;
+            opacity: 0; animation: fadeIn 0.3s forwards;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+        .modal-content {
+            background-color: var(--card-background-color); padding: 2.5rem; border-radius: var(--border-radius-md);
+            max-width: 95%; box-shadow: var(--box-shadow-lg); position: relative;
+            max-height: 90vh; overflow-y: auto;
+            transform: scale(0.95); opacity: 0; animation: zoomIn 0.3s 0.1s forwards;
+        }
+        @keyframes zoomIn { to { transform: scale(1); opacity: 1; } }
+        .modal-close-button {
+            position: absolute; top: 1rem; right: 1.5rem; background: none; border: none;
+            font-size: 2rem; cursor: pointer; color: var(--text-muted-color); line-height: 1; padding: 0.5rem;
+        }
+        .modal-close-button:hover { color: var(--text-color); }
+        .pose-estimation-container video { width: 100%; max-width: 480px; border: 2px solid var(--primary-color); border-radius: var(--border-radius-sm); margin-bottom: 1rem; background-color: #222; }
+        .pose-estimation-container .feedback { margin-top: 1rem; padding: 1.25rem; background-color: #e0f2f1; border-left: 5px solid var(--primary-color); border-radius: var(--border-radius-sm); }
+        .pose-estimation-container .feedback h4 { margin-top: 0; color: var(--primary-darker); }
+        .dashboard-card { cursor: pointer; border-left: 5px solid transparent; }
+        .dashboard-card:hover { border-left-color: var(--primary-darker) !important; }
+        .dashboard-card .card-icon { font-size: 1.8em; margin-right: 1rem; opacity: 0.7; }
+        .dashboard-card h3 { border-bottom: none; margin-bottom: 0.5rem; font-size: 1.2rem; }
+        .dashboard-card p.value-highlight { margin-top: 0.25rem; margin-bottom: 0.5rem; font-size: 1.8em;}
+        .dashboard-card p:not(.value-highlight) { font-size: 0.9rem; color: var(--text-muted-color); }
+        footer.app-footer { text-align: center; padding: 2rem; background-color: var(--secondary-color); color: #bdc3c7; margin-top: auto; font-size: 0.9rem; }
+        footer.app-footer p { margin: 0.25rem 0; }
+        .spinner-container { display: flex; justify-content: center; align-items: center; padding: 20px; min-height: 100px;}
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: var(--primary-color); animation: spin 0.8s linear infinite; }
+        button .spinner { width: 20px; height: 20px; border-width: 3px; display: inline-block; vertical-align: middle; margin-left: 8px; border-left-color: currentColor; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @media (max-width: 992px) { header.app-header { flex-direction: column; align-items: center; } header.app-header h1 { margin-bottom: 1rem; text-align: center; } header.app-header nav { margin-left: 0; width: 100%; } header.app-header nav ul { justify-content: center; } }
+        @media (max-width: 768px) { main.app-main { padding: 1.5rem; } .dashboard-grid { grid-template-columns: 1fr; } .form-container, .modal-content { padding: 1.5rem; max-width: 100%; } button, .button-primary, .button-secondary, .button-danger, .button-accent { padding: 0.7rem 1.2rem; font-size: 0.95rem; } }
+        @media (max-width: 480px) { header.app-header nav ul { flex-direction: column; align-items: stretch; } header.app-header nav ul li { margin: 0.25rem 0; width: 100%; } header.app-header nav ul li a, header.app-header nav ul li button { justify-content: center; } .item-list li { flex-direction: column; align-items: flex-start; } .item-list li .actions { width: 100%; margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;} .item-list li .actions button { width: 100%; margin-left: 0; } }
+        #stripe-card-element { padding: 12px; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); background-color: white; box-shadow: var(--box-shadow-sm); }
+        #stripe-card-element.StripeElement--focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 201, 167, 0.2); }
+        #stripe-card-element.StripeElement--invalid { border-color: var(--error-color); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, createContext, useContext, useCallback, useRef } = React;
+
+        // --- Constants ---
+        const API_BASE_URL = 'http://localhost:8000/api/v1';
+        // IMPORTANT: Replace with your actual Stripe Publishable Key
+        const STRIPE_PUBLISHABLE_KEY = 'pk_test_YOUR_STRIPE_PUBLISHABLE_KEY_HERE';
+
+        // --- Auth Context ---
+        const AuthContext = createContext();
+
+        function AuthProvider({ children }) {
+            const [authState, setAuthState] = useState({
+                firebaseUser: null,
+                localUser: null,
+                idToken: null,
+                isAuthenticated: false,
+                loading: true, // Initial loading state
+            });
+
+            useEffect(() => {
+                if (!window.firebaseAuth || !window.firebaseOnAuthStateChanged || !window.firebaseGetIdToken || !window.firebaseSignOut) {
+                    console.warn("Firebase Auth functions not yet available on window. Setting auth loading to false.");
+                    setAuthState(s => ({ ...s, loading: false }));
+                    return;
+                }
+
+                const unsubscribe = window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
+                    console.log("AuthProvider: onAuthStateChanged triggered. Firebase user:", user ? user.email : "null");
+                    if (user) {
+                        setAuthState(s => ({ ...s, loading: true, firebaseUser: user, isAuthenticated: false, localUser: null, idToken: null }));
+                        try {
+                            const token = await window.firebaseGetIdToken(user);
+                            console.log("AuthProvider: Firebase ID Token obtained for backend sync.");
+
+                            const localUserProfile = await apiRequest('/auth/firebase-signin', 'POST', null, token);
+                            console.log("AuthProvider: Backend /firebase-signin response (localUser):", localUserProfile);
+
+                            if (localUserProfile && localUserProfile.id) {
+                                setAuthState({
+                                    firebaseUser: user,
+                                    localUser: localUserProfile,
+                                    idToken: token,
+                                    isAuthenticated: true,
+                                    loading: false,
+                                });
+                            } else {
+                                console.error("AuthProvider: Backend sync failed or returned invalid user profile.");
+                                await window.firebaseSignOut(window.firebaseAuth);
+                                setAuthState({ firebaseUser: null, localUser: null, idToken: null, isAuthenticated: false, loading: false });
+                            }
+                        } catch (error) {
+                            console.error("AuthProvider: Error during Firebase sign-in with backend or getting local user:", error.message);
+                            await window.firebaseSignOut(window.firebaseAuth).catch(e => console.error("Firebase signout error after backend failure:", e));
+                            setAuthState({ firebaseUser: null, localUser: null, idToken: null, isAuthenticated: false, loading: false });
+                        }
+                    } else {
+                        console.log("AuthProvider: Firebase user is null (signed out).");
+                        setAuthState({ firebaseUser: null, localUser: null, idToken: null, isAuthenticated: false, loading: false });
+                    }
+                });
+                return () => unsubscribe();
+            }, []);
+
+            const loginWithEmail = async (email, password) => {
+                if (!window.firebaseSignInWithEmailAndPassword) return { success: false, message: "Firebase (login) not ready."};
+                try {
+                    await window.firebaseSignInWithEmailAndPassword(window.firebaseAuth, email, password);
+                    return { success: true };
+                } catch (error) {
+                    return { success: false, message: error.message || "Firebase login failed." };
+                }
+            };
+
+            const registerWithEmail = async (email, password, fullName) => {
+                if (!window.firebaseCreateUserWithEmailAndPassword || !window.firebaseUpdateProfile) return { success: false, message: "Firebase (register) not ready."};
+                try {
+                    const userCredential = await window.firebaseCreateUserWithEmailAndPassword(window.firebaseAuth, email, password);
+                    if (userCredential.user && fullName) {
+                        await window.firebaseUpdateProfile(userCredential.user, { displayName: fullName });
+                    }
+                    return { success: true, message: "Registration successful! Syncing with backend..." };
+                } catch (error) {
+                    return { success: false, message: error.message || "Firebase registration failed." };
+                }
+            };
+
+            const loginWithGoogle = async () => {
+                if (!window.firebaseGoogleAuthProvider || !window.firebaseSignInWithPopup) return { success: false, message: "Firebase Google Auth not ready."};
+                const provider = new window.firebaseGoogleAuthProvider();
+                try {
+                    await window.firebaseSignInWithPopup(window.firebaseAuth, provider);
+                    return { success: true };
+                } catch (error) {
+                    return { success: false, message: error.message || "Google Sign-In failed." };
+                }
+            };
+
+            const logout = async () => {
+                if (!window.firebaseSignOut || !window.firebaseAuth) return;
+                try {
+                    await window.firebaseSignOut(window.firebaseAuth);
+                } catch (error) {
+                    console.error("AuthProvider: Firebase Logout error:", error);
+                }
+            };
+
+            const refreshUserAndToken = useCallback(async () => {
+                if (authState.firebaseUser && window.firebaseGetIdToken) {
+                    setAuthState(s => ({...s, loading: true}));
+                    try {
+                        const freshToken = await window.firebaseGetIdToken(authState.firebaseUser, true);
+                        const localUserProfile = await apiRequest('/auth/firebase-signin', 'POST', null, freshToken);
+                        if (localUserProfile && localUserProfile.id) {
+                            setAuthState(s => ({...s, idToken: freshToken, localUser: localUserProfile, isAuthenticated: true, loading: false}));
+                        } else {
+                            await logout();
+                        }
+                    } catch (error) {
+                        await logout();
+                    }
+                }
+            }, [authState.firebaseUser]);
+
+            return (
+                <AuthContext.Provider value={{ ...authState, user: authState.localUser, token: authState.idToken, registerWithEmail, loginWithEmail, loginWithGoogle, logout, refreshUserAndToken }}>
+                    {children}
+                </AuthContext.Provider>
+            );
+        }
+        function useAuth() { return useContext(AuthContext); }
+
+        // API Request function
+        async function apiRequest(endpoint, method = 'GET', body = null, token = null, isFormData = false) {
+            const headers = {};
+            if (token) { headers['Authorization'] = `Bearer ${token}`; }
+            if (!isFormData && body) { headers['Content-Type'] = 'application/json'; }
+
+            const config = { method, headers };
+            if (body) { config.body = isFormData ? body : JSON.stringify(body); }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+                if (!response.ok) {
+                    let errorData;
+                    try { errorData = await response.json(); }
+                    catch (e) { errorData = { detail: `HTTP error! status: ${response.status}` }; }
+                    throw new Error(errorData.detail || `Request failed with status ${response.status}`);
+                }
+                if (response.status === 204 || response.headers.get("content-length") === "0") { return null; }
+                return response.json();
+            } catch (error) {
+                console.error(`API request error: ${error.message}`);
+                throw error;
+            }
+        }
+
+        // Reusable Components
+        function LoadingSpinner({inline = false, size = "medium"}) { let spinnerSize = '40px', borderWidth = '4px'; if (size === 'small') { spinnerSize = '20px'; borderWidth = '3px'; } else if (size === 'large') { spinnerSize = '60px'; borderWidth = '5px'; } const spinnerStyle = { width: spinnerSize, height: spinnerSize, borderWidth: borderWidth, }; if (inline) return <span className="spinner" style={spinnerStyle}></span>; return <div className="spinner-container"><div className="spinner" style={spinnerStyle}></div></div>; }
+        function MessageDisplay({ type, message }) { if (!message) return null; const className = type === 'error' ? 'error-message message-base' : type === 'success' ? 'success-message message-base' : 'message-base'; const icon = type === 'error' ? 'fas fa-exclamation-circle' : type === 'success' ? 'fas fa-check-circle' : 'fas fa-info-circle'; return ( <div className={className}> <i className={icon}></i> <span>{message}</span> </div> ); }
+        function Modal({ isOpen, onClose, title, children }) { if (!isOpen) return null; return ( <div className="modal" onClick={onClose}> <div className="modal-content" onClick={(e) => e.stopPropagation()}> <button className="modal-close-button" onClick={onClose}>×</button> {title && <h2>{title}</h2>} {children} </div> </div> ); }
+
+
+        // --- Page Components ---
+        function LoginPage() {
+            const { loginWithEmail, loginWithGoogle, loading: authLoading } = useAuth();
+            const { setCurrentView } = useNavigation();
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [isSubmitting, setIsSubmitting] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault(); setIsSubmitting(true); setError('');
+                const res = await loginWithEmail(email, password);
+                setIsSubmitting(false);
+                if (!res.success) setError(res.message);
+            };
+
+            const handleGoogleLogin = async () => {
+                setIsSubmitting(true); setError('');
+                const res = await loginWithGoogle();
+                setIsSubmitting(false);
+                if (!res.success) setError(res.message);
+            }
+
+            const isLoading = authLoading || isSubmitting;
+
+            return (
+            <div className="form-container">
+                <h2 className="text-center"><i className="fas fa-lock fa-fw" style={{color: 'var(--primary-color)'}}></i> Secure Login</h2>
+                <MessageDisplay type="error" message={error} />
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label htmlFor="email_login">Email Address</label>
+                        <input type="email" id="email_login" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="password_login">Password</label>
+                        <input type="password" id="password_login" value={password} onChange={e => setPassword(e.target.value)} required disabled={isLoading}/>
+                    </div>
+                    <button type="submit" className="form-button button-primary" disabled={isLoading}>
+                        {isLoading ? <>Processing... <LoadingSpinner inline={true} size="small"/></> : <><i className="fas fa-sign-in-alt"></i> Login with Email</>}
+                    </button>
+                </form>
+                <div style={{textAlign: 'center', margin: '1.5rem 0'}}>OR</div>
+                <button onClick={handleGoogleLogin} className="form-button" style={{width:'100%', backgroundColor: '#DB4437', color: 'white'}} disabled={isLoading}>
+                     {isLoading ? <>Connecting... <LoadingSpinner inline={true} size="small"/></> : <><i className="fab fa-google"></i> Sign in with Google</>}
+                </button>
+                <p className="text-center mt-2">Don't have an account? <button className="link-button" onClick={() => setCurrentView('register')} disabled={isLoading}>Register here</button></p>
+            </div>
+            );
+        }
+
+        function RegisterPage() {
+            const { registerWithEmail, loading: authLoading } = useAuth();
+            const { setCurrentView } = useNavigation();
+            const [formData, setFormData] = useState({email:'', password:'', confirmPassword:'', full_name:''});
+            const [error, setError] = useState('');
+            const [success, setSuccess] = useState('');
+            const [isSubmitting, setIsSubmitting] = useState(false);
+
+            const handleChange = e => setFormData({...formData, [e.target.name]: e.target.value});
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if(formData.password !== formData.confirmPassword){setError("Passwords don't match."); return;}
+                if(formData.password.length < 6) {setError("Password must be at least 6 characters long."); return;}
+                setIsSubmitting(true); setError(''); setSuccess('');
+
+                const res = await registerWithEmail(formData.email, formData.password, formData.full_name);
+                setIsSubmitting(false);
+                if(res.success) setSuccess(res.message);
+                else setError(res.message);
+            };
+            const isLoading = authLoading || isSubmitting;
+
+            return (
+            <div className="form-container">
+                <h2 className="text-center"><i className="fas fa-user-plus fa-fw" style={{color: 'var(--primary-color)'}}></i> Create Your Account</h2>
+                <MessageDisplay type="error" message={error} />
+                <MessageDisplay type="success" message={success} />
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group"><label>Full Name</label><input type="text" name="full_name" value={formData.full_name} onChange={handleChange} required disabled={isLoading} /></div>
+                    <div className="form-group"><label>Email Address</label><input type="email" name="email" value={formData.email} onChange={handleChange} required disabled={isLoading} /></div>
+                    <div className="form-group"><label>Password (min. 6 characters)</label><input type="password" name="password" value={formData.password} onChange={handleChange} required disabled={isLoading} /></div>
+                    <div className="form-group"><label>Confirm Password</label><input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required disabled={isLoading} /></div>
+                    <button type="submit" className="form-button button-primary" disabled={isLoading}>
+                        {isLoading ? <>Registering... <LoadingSpinner inline={true} size="small"/></> : <><i className="fas fa-check-circle"></i> Register with Email</>}
+                    </button>
+                </form>
+                 <p className="text-center mt-2">Already have an account? <button className="link-button" onClick={() => setCurrentView('login')} disabled={isLoading}>Login instead</button></p>
+            </div>
+            );
+        }
+
+        function AppHeader() {
+            const { isAuthenticated, user, logout } = useAuth();
+            const { currentView, setCurrentView } = useNavigation();
+            const NavItem = ({ view, children, iconClass }) => ( <li> <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView(view); }} className={currentView === view ? 'active-nav' : ''}> {iconClass && <i className={`${iconClass} fa-fw`}></i>} {children} </a> </li> );
+            const NavButton = ({ onClick, children, iconClass }) => ( <li> <button onClick={onClick}> {iconClass && <i className={`${iconClass} fa-fw`}></i>} {children} </button> </li> );
+
+            return ( <header className="app-header"> <h1><i className="fas fa-heartbeat"></i> FitTrack Pro</h1> <nav> <ul> {isAuthenticated && user ? ( <> <NavItem view="dashboard" iconClass="fas fa-tachometer-alt">Dashboard</NavItem> <NavItem view="profile" iconClass="fas fa-user-circle">Profile</NavItem> <NavItem view="activity" iconClass="fas fa-running">Activity</NavItem> <NavButton onClick={logout} iconClass="fas fa-sign-out-alt">Logout</NavButton> <li style={{color: 'var(--primary-color)', marginLeft: '0.5rem'}}>({user.full_name || user.email})</li> </> ) : ( <div className="auth-buttons"> <NavButton onClick={() => setCurrentView('login')} iconClass="fas fa-sign-in-alt">Login</NavButton> <NavButton onClick={() => setCurrentView('register')} iconClass="fas fa-user-plus">Register</NavButton> </div> )} </ul> </nav> </header> );
+        }
+
+        function DashboardPage() {
+            const { user } = useAuth();
+            return <div className="card"><h2><i className="fas fa-tachometer-alt"></i> Dashboard</h2><p>Welcome back, {user.full_name || user.email}!</p></div>;
+        }
+        function UserProfilePage() { return <div className="card"><h2><i className="fas fa-id-card"></i> User Profile</h2></div>; }
+        function ActivityTrackingPage() { return <div className="card"><h2><i className="fas fa-chart-pie"></i> Activity Tracking</h2></div>; }
+
+        // --- Navigation Context & Provider (UPDATED) ---
+        const NavigationContext = createContext();
+
+        function NavigationProvider({ children }) {
+            // Default to 'login' if no auth state known yet, or if not authenticated.
+            // AuthProvider's loading state will prevent premature redirects.
+            const [currentView, setCurrentView] = useState('login');
+            const { isAuthenticated, loading: authLoading } = useAuth();
+
+            useEffect(() => {
+                console.log("NavigationProvider Effect: authLoading:", authLoading, "isAuthenticated:", isAuthenticated, "currentView:", currentView);
+
+                if (!authLoading) { // Only attempt to navigate once authentication status is resolved
+                    if (isAuthenticated) {
+                        // User is authenticated
+                        if (currentView === 'login' || currentView === 'register') {
+                            console.log("NavigationProvider: Authenticated and on login/register page. Redirecting to dashboard.");
+                            setCurrentView('dashboard');
+                        }
+                        // If already on another authenticated page, currentView remains as is.
+                    } else {
+                        // User is NOT authenticated
+                        if (currentView !== 'login' && currentView !== 'register') {
+                            console.log("NavigationProvider: Not authenticated and not on login/register. Redirecting to login.");
+                            setCurrentView('login');
+                        }
+                        // If already on login or register, currentView remains as is.
+                    }
+                }
+            }, [isAuthenticated, authLoading, currentView]); // Dependencies for this effect
+
+            return (
+                <NavigationContext.Provider value={{ currentView, setCurrentView }}>
+                    {children}
+                </NavigationContext.Provider>
+            );
+        }
+        function useNavigation() { return useContext(NavigationContext); }
+
+        // --- Main App Component ---
+        function App() {
+            const { currentView } = useNavigation();
+            const { isAuthenticated, loading: authLoading } = useAuth();
+
+            if (authLoading) {
+                return <div style={{display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', height:'100vh', backgroundColor: 'var(--secondary-color)'}}>
+                           <LoadingSpinner size="large"/>
+                           <p style={{marginTop: '1.5rem', color: 'var(--primary-color)', fontSize: '1.3rem', fontWeight:'500'}}>Initializing FitTrack Pro...</p>
+                       </div>;
+            }
+
+            let viewComponent;
+            if (!isAuthenticated) {
+                viewComponent = currentView === 'register' ? <RegisterPage /> : <LoginPage />;
+            } else {
+                switch (currentView) {
+                    case 'profile': viewComponent = <UserProfilePage />; break;
+                    case 'activity': viewComponent = <ActivityTrackingPage />; break;
+                    // Add other authenticated views here
+                    case 'dashboard':
+                    default: viewComponent = <DashboardPage />; break;
+                }
+            }
+
+            return (
+                <>
+                    <AppHeader />
+                    <main className="app-main">
+                        {viewComponent}
+                    </main>
+                    <footer className="app-footer">
+                        <p>© {new Date().getFullYear()} FitTrack Pro. Transformative Fitness Awaits.</p>
+                        <p>Built with <i className="fas fa-heart" style={{color: 'var(--error-color)'}}></i> & Firebase.</p>
+                    </footer>
+                </>
+            );
+        }
+
+        const RootComponent = () => ( <AuthProvider><NavigationProvider><App /></NavigationProvider></AuthProvider> );
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => ReactDOM.render(<RootComponent />, document.getElementById('root')));
+        } else {
+            ReactDOM.render(<RootComponent />, document.getElementById('root'));
+        }
+
+    </script>
+</body>
+</html>
